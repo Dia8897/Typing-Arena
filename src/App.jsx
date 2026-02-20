@@ -512,8 +512,8 @@ import Stage3 from "./stages/stage3_components";
 import Stage4 from "./stages/stage4_TypingArena";
 
 export default function App() {
-  return <Stage1 />; // Person 1
-  return <Stage2 />; // Person 2
-  return <Stage3 />; // Person 3
+  // return <Stage1 />; // Person 1
+  // return <Stage2 />; // Person 2
+  // return <Stage3 />; // Person 3
   return <Stage4 />; // Person 4 (final full demo)
 }
