@@ -506,14 +506,109 @@
 // }
 
 
-import Stage1 from "./stages/stage1_skeleton";
-import Stage2 from "./stages/stage2_layout";
-import Stage3 from "./stages/stage3_components";
-import Stage4 from "./stages/stage4_TypingArena";
+
+
+
+
+
+
+
+
+
+
+import React from "react";
+import "./index.css";
+
+import Stage1_Shell from "./stages/Stage1_Shell";
+import Stage2_Layout from "./stages/Stage2_Layout";
+import Stage3_UI, { PromptRenderer, Stat, Bar } from "./stages/Stage3_UI";
+import Stage4_TypingArena from "./stages/Stage4_TypingArena";
+
+const STAGE = 4; // change live: 1 -> 2 -> 3 -> 4
 
 export default function App() {
-  // return <Stage1 />; // Person 1
-  // return <Stage2 />; // Person 2
-  // return <Stage3 />; // Person 3
-  return <Stage4 />; // Person 4 (final full demo)
+  if (STAGE === 1) {
+    return (
+      <Stage1_Shell
+        title="Typing Arena"
+        subtitle="Stage 1/4 • Installation + React entry point (App runs ✅)"
+      >
+        <div className="card">
+          In Stage 1 we confirm React is installed and rendering. Next we build the layout.
+        </div>
+      </Stage1_Shell>
+    );
+  }
+
+  if (STAGE === 2) {
+    return (
+      <Stage2_Layout
+        title="Typing Arena"
+        subtitle="Stage 2/4 • Creating a React app (JSX layout)"
+        left={
+          <>
+            <div className="cardTitle">Prompt (placeholder)</div>
+            <div className="prompt" style={{ opacity: 0.7 }}>
+              Layout exists — logic comes later.
+            </div>
+            <textarea className="input" disabled placeholder="Input will be wired in Stage 4…" />
+          </>
+        }
+        right={
+          <>
+            <div className="cardTitle">Dashboard (placeholder)</div>
+            <div className="dashGrid">
+              <div className="stat">
+                <div className="statLabel">WPM</div>
+                <div className="statValue big">—</div>
+              </div>
+              <div className="stat">
+                <div className="statLabel">Accuracy</div>
+                <div className="statValue big">—</div>
+              </div>
+            </div>
+          </>
+        }
+      />
+    );
+  }
+
+  if (STAGE === 3) {
+    const prompt = "React components are reusable blocks that make UI easy to build.";
+    const typed = "React components are reusa";
+
+    return (
+      <Stage3_UI
+        title="Typing Arena"
+        subtitle="Stage 3/4 • Components (PromptRenderer / Stat / Bar)"
+        left={
+          <>
+            <div className="cardTitle">PromptRenderer</div>
+            <PromptRenderer prompt={prompt} typed={typed} />
+          </>
+        }
+        right={
+          <>
+            <div className="cardTitle">Reusable Stat + Bar</div>
+            <div className="dashGrid">
+              <Stat label="WPM" value="—" big />
+              <Stat label="Accuracy" value="—" big />
+              <Stat label="Progress" value="—" />
+              <Stat label="Streak" value="—" />
+            </div>
+
+            <div className="meter">
+              <div className="meterTop">
+                <span>Example bar</span>
+                <span>50%</span>
+              </div>
+              <Bar value={50} />
+            </div>
+          </>
+        }
+      />
+    );
+  }
+
+  return <Stage4_TypingArena />;
 }

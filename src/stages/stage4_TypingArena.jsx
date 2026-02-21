@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "../index.css";
+import Stage3_UI, { PromptRenderer, Stat, Bar } from "./Stage3_UI";
 
 const PROMPTS = [
   "React makes interfaces feel alive by updating the UI instantly when state changes.",
@@ -19,9 +20,6 @@ const LS_KEY = "typing_arena_leaderboard_v1";
 
 function pickPrompt() {
   return PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
-}
-function clamp(n, a, b) {
-  return Math.max(a, Math.min(b, n));
 }
 function round1(n) {
   return Math.round(n * 10) / 10;
@@ -43,8 +41,7 @@ function loadLeaderboard() {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return [];
     const data = JSON.parse(raw);
-    if (!Array.isArray(data)) return [];
-    return data;
+    return Array.isArray(data) ? data : [];
   } catch {
     return [];
   }
@@ -53,64 +50,13 @@ function saveLeaderboard(entries) {
   localStorage.setItem(LS_KEY, JSON.stringify(entries));
 }
 
-function PromptRenderer({ prompt, typed }) {
-  const spans = [];
-  const n = prompt.length;
-  const t = typed.length;
-
-  for (let i = 0; i < n; i++) {
-    const expected = prompt[i];
-    const got = i < t ? typed[i] : null;
-
-    let style = {};
-    if (got === null) {
-      if (i === t) style = { textDecoration: "underline", textDecorationThickness: 2 };
-      else style = { opacity: 0.75 };
-    } else if (got === expected) {
-      style = {};
-    } else {
-      style = {
-        textDecoration: "underline",
-        textDecorationColor: "#c1121f",
-        textDecorationThickness: 3
-      };
-    }
-
-    spans.push(
-      <span key={i} style={style}>
-        {expected}
-      </span>
-    );
-  }
-
-  return <div className="prompt">{spans}</div>;
-}
-
-function Stat({ label, value, big }) {
-  return (
-    <div className="stat">
-      <div className="statLabel">{label}</div>
-      <div className={`statValue ${big ? "big" : ""}`}>{value}</div>
-    </div>
-  );
-}
-
-function Bar({ value }) {
-  const pct = clamp(value, 0, 100);
-  return (
-    <div className="bar">
-      <div className="barFill" style={{ width: `${pct}%` }} />
-    </div>
-  );
-}
-
 export default function Stage4_TypingArena() {
   const inputRef = useRef(null);
 
   const [duration, setDuration] = useState(15);
   const [prompt, setPrompt] = useState(() => pickPrompt());
 
-  const [phase, setPhase] = useState("READY");
+  const [phase, setPhase] = useState("READY"); // READY | RUNNING | DONE
   const [startAt, setStartAt] = useState(null);
   const [elapsed, setElapsed] = useState(0);
   const [timeLeft, setTimeLeft] = useState(duration);
@@ -145,15 +91,7 @@ export default function Stage4_TypingArena() {
     const wpm = computeWPM(correct, Math.max(elapsed, 1));
     const progress = Math.min(100, Math.round((typed.length / prompt.length) * 100));
 
-    return {
-      correctChars: correct,
-      mistakes: wrong,
-      accuracy: acc,
-      wpm,
-      streak: currentStreak,
-      bestStreak,
-      progress
-    };
+    return { correctChars: correct, mistakes: wrong, accuracy: acc, wpm, streak: currentStreak, bestStreak, progress };
   }, [prompt, typed, elapsed]);
 
   useEffect(() => {
@@ -165,7 +103,6 @@ export default function Stage4_TypingArena() {
       const left = Math.max(0, duration - e);
       setElapsed(e);
       setTimeLeft(left);
-
       if (left === 0) setPhase("DONE");
     }, 100);
 
@@ -183,6 +120,13 @@ export default function Stage4_TypingArena() {
     if (phase !== "DONE") inputRef.current?.focus();
   }, [phase]);
 
+  function startIfNeeded() {
+    if (phase === "READY") {
+      setPhase("RUNNING");
+      setStartAt(Date.now());
+    }
+  }
+
   function reset(newPrompt = true) {
     setPhase("READY");
     setStartAt(null);
@@ -192,13 +136,6 @@ export default function Stage4_TypingArena() {
     setBackspaces(0);
     if (newPrompt) setPrompt(pickPrompt());
     setTimeout(() => inputRef.current?.focus(), 0);
-  }
-
-  function startIfNeeded() {
-    if (phase === "READY") {
-      setPhase("RUNNING");
-      setStartAt(Date.now());
-    }
   }
 
   function onChangeValue(next) {
@@ -211,15 +148,10 @@ export default function Stage4_TypingArena() {
     const finalElapsed = Math.max(1, elapsed || duration);
     const finalWpm = computeWPM(derived.correctChars, finalElapsed);
     const finalAcc = accuracyPct(derived.correctChars, typed.length);
-    const score = scoreFormula({
-      correctChars: derived.correctChars,
-      mistakes: derived.mistakes,
-      wpm: finalWpm,
-      accuracy: finalAcc
-    });
+    const score = scoreFormula({ correctChars: derived.correctChars, mistakes: derived.mistakes, wpm: finalWpm, accuracy: finalAcc });
 
     const entry = {
-      id: (crypto?.randomUUID?.() || String(Date.now())),
+      id: crypto?.randomUUID?.() || String(Date.now()),
       name: (name || "Anonymous").slice(0, 18),
       duration,
       wpm: round1(finalWpm),
@@ -244,12 +176,8 @@ export default function Stage4_TypingArena() {
     const finalElapsed = Math.max(1, elapsed || duration);
     const finalWpm = computeWPM(derived.correctChars, finalElapsed);
     const finalAcc = accuracyPct(derived.correctChars, typed.length);
-    const finalScore = scoreFormula({
-      correctChars: derived.correctChars,
-      mistakes: derived.mistakes,
-      wpm: finalWpm,
-      accuracy: finalAcc
-    });
+    const finalScore = scoreFormula({ correctChars: derived.correctChars, mistakes: derived.mistakes, wpm: finalWpm, accuracy: finalAcc });
+
     return {
       wpm: round1(finalWpm),
       accuracy: round1(finalAcc),
@@ -274,192 +202,157 @@ export default function Stage4_TypingArena() {
   }
 
   function handleSave() {
-    const name = prompt("Enter your name (for this device’s leaderboard):") || "Anonymous";
+    const name = window.prompt("Enter your name (for this device’s leaderboard):") || "Anonymous";
     submitScore(name);
   }
 
-  return (
-    <div className="page">
-      <div className="container">
-        <header className="header">
-          <div>
-            <div className="title">Typing Arena</div>
-            <div className="subtitle">Stage 4/4 • Live events + build + deploy ready</div>
-          </div>
-
-          <div className="controls">
-            <div className="pill">
-              <span className="pillLabel">Round</span>
-              <select
-                value={duration}
-                onChange={(e) => setDuration(Number(e.target.value))}
-                disabled={phase !== "READY"}
-              >
-                {DURATIONS.map((d) => (
-                  <option key={d} value={d}>
-                    {d}s
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <button className="btn" onClick={() => reset(true)} type="button">
-              New prompt
-            </button>
-
-            <button className="btn dark" onClick={() => reset(false)} type="button">
-              Restart
-            </button>
-          </div>
-        </header>
-
-        <div className="grid">
-          <section className="card">
-            <div className="row between">
-              <div className="cardTitle">Prompt</div>
-              <div className="timer">
-                {phase === "RUNNING" ? (
-                  <span className="live">LIVE</span>
-                ) : phase === "DONE" ? (
-                  <span className="done">DONE</span>
-                ) : (
-                  <span className="ready">READY</span>
-                )}
-                <span className="time">{timeLeft}s</span>
-              </div>
-            </div>
-
-            <PromptRenderer prompt={prompt} typed={typed} />
-
-            <textarea
-              ref={inputRef}
-              className="input"
-              value={typed}
-              onChange={(e) => onChangeValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (phase === "READY") startIfNeeded();
-                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v") e.preventDefault();
-              }}
-              disabled={phase === "DONE"}
-              placeholder={
-                phase === "READY"
-                  ? "Type to start (timer starts on first key)…"
-                  : phase === "RUNNING"
-                  ? "Keep going…"
-                  : "Round finished. Restart or save score."
-              }
-            />
-
-            <div className="hint">
-              Paste is blocked. Timer starts on first key. Best for 15–20s live demos.
-            </div>
-
-            {phase === "DONE" && (
-              <div className="results">
-                <div className="resultsTop">
-                  <div className="resultsTitle">Results</div>
-                  <div className="resultsScore">Score: {finalStats.score}</div>
-                </div>
-
-                <div className="resultsGrid">
-                  <Stat label="WPM" value={finalStats.wpm} big />
-                  <Stat label="Accuracy" value={`${finalStats.accuracy}%`} big />
-                  <Stat label="Correct" value={finalStats.correctChars} />
-                  <Stat label="Mistakes" value={finalStats.mistakes} />
-                  <Stat label="Best streak" value={finalStats.bestStreak} />
-                  <Stat label="Backspaces" value={finalStats.backspaces} />
-                </div>
-
-                <div className="btnRow">
-                  <button className="btn dark" onClick={handleSave} type="button">
-                    Save to leaderboard
-                  </button>
-                  <button className="btn" onClick={copyResult} type="button">
-                    Copy result
-                  </button>
-                </div>
-              </div>
-            )}
-          </section>
-
-          <aside className="card">
-            <div className="cardTitle">Live Dashboard</div>
-
-            <div className="dashGrid">
-              <Stat label="WPM" value={round1(derived.wpm)} big />
-              <Stat label="Accuracy" value={`${round1(derived.accuracy)}%`} big />
-              <Stat label="Progress" value={`${derived.progress}%`} />
-              <Stat label="Streak" value={`${derived.streak} (best ${derived.bestStreak})`} />
-              <Stat label="Mistakes" value={derived.mistakes} />
-              <Stat label="Backspaces" value={backspaces} />
-            </div>
-
-            <div className="meter">
-              <div className="meterTop">
-                <span>Accuracy bar</span>
-                <span>{round1(derived.accuracy)}%</span>
-              </div>
-              <Bar value={derived.accuracy} />
-            </div>
-
-            <div className="meter">
-              <div className="meterTop">
-                <span>Progress bar</span>
-                <span>{derived.progress}%</span>
-              </div>
-              <Bar value={derived.progress} />
-            </div>
-
-            <div className="divider" />
-
-            <div className="row between">
-              <div className="cardTitle" style={{ margin: 0 }}>
-                Local Leaderboard (Top 10)
-              </div>
-              <button className="btn small" onClick={clearLeaderboard} type="button">
-                Clear
-              </button>
-            </div>
-
-            {leaderboard.length === 0 ? (
-              <div className="empty">No scores yet on this device. Finish a round → Save.</div>
-            ) : (
-              <div className="table">
-                <div className="tr head">
-                  <div>#</div>
-                  <div>Name</div>
-                  <div>Score</div>
-                  <div>WPM</div>
-                  <div>Acc</div>
-                </div>
-                {leaderboard.map((e, idx) => (
-                  <div className="tr" key={e.id}>
-                    <div>{idx + 1}</div>
-                    <div title={e.at}>{e.name}</div>
-                    <div>{e.score}</div>
-                    <div>{e.wpm}</div>
-                    <div>{e.accuracy}%</div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="howto">
-              <div className="howtoTitle">Class competition idea</div>
-              <ul>
-                <li>Put the Netlify link + QR code on the slide.</li>
-                <li>Everyone plays 15s on their phone.</li>
-                <li>They tap “Copy result” and paste it in chat.</li>
-                <li>You announce the winner (highest Score).</li>
-              </ul>
-            </div>
-          </aside>
-        </div>
-
-        <footer className="footer">
-          Built with React components + events + state. Ready for Netlify deploy.
-        </footer>
+  const headerRight = (
+    <>
+      <div className="pill">
+        <span className="pillLabel">Round</span>
+        <select value={duration} onChange={(e) => setDuration(Number(e.target.value))} disabled={phase !== "READY"}>
+          {DURATIONS.map((d) => (
+            <option key={d} value={d}>
+              {d}s
+            </option>
+          ))}
+        </select>
       </div>
-    </div>
+
+      <button className="btn" onClick={() => reset(true)} type="button">
+        New prompt
+      </button>
+
+      <button className="btn dark" onClick={() => reset(false)} type="button">
+        Restart
+      </button>
+    </>
+  );
+
+  return (
+    <Stage3_UI
+      title="Typing Arena"
+      subtitle="Live stats • short rounds • perfect for classroom competition"
+      headerRight={headerRight}
+      left={
+        <>
+          <div className="row between">
+            <div className="cardTitle">Prompt</div>
+            <div className="timer">
+              {phase === "RUNNING" ? <span className="live">LIVE</span> : phase === "DONE" ? <span className="done">DONE</span> : <span className="ready">READY</span>}
+              <span className="time">{timeLeft}s</span>
+            </div>
+          </div>
+
+          <PromptRenderer prompt={prompt} typed={typed} />
+
+          <textarea
+            ref={inputRef}
+            className="input"
+            value={typed}
+            onChange={(e) => onChangeValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (phase === "READY") startIfNeeded();
+              if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v") e.preventDefault();
+            }}
+            disabled={phase === "DONE"}
+            placeholder={phase === "READY" ? "Type to start (timer starts on first key)…" : phase === "RUNNING" ? "Keep going…" : "Round finished. Restart or save score."}
+          />
+
+          <div className="hint">Paste is blocked. Timer starts on first key. Best for 15–20s live demos.</div>
+
+          {phase === "DONE" && (
+            <div className="results">
+              <div className="resultsTop">
+                <div className="resultsTitle">Results</div>
+                <div className="resultsScore">Score: {finalStats.score}</div>
+              </div>
+
+              <div className="resultsGrid">
+                <Stat label="WPM" value={finalStats.wpm} big />
+                <Stat label="Accuracy" value={`${finalStats.accuracy}%`} big />
+                <Stat label="Correct" value={finalStats.correctChars} />
+                <Stat label="Mistakes" value={finalStats.mistakes} />
+                <Stat label="Best streak" value={finalStats.bestStreak} />
+                <Stat label="Backspaces" value={finalStats.backspaces} />
+              </div>
+
+              <div className="btnRow">
+                <button className="btn dark" onClick={handleSave} type="button">
+                  Save to leaderboard
+                </button>
+                <button className="btn" onClick={copyResult} type="button">
+                  Copy result
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      }
+      right={
+        <>
+          <div className="cardTitle">Live Dashboard</div>
+
+          <div className="dashGrid">
+            <Stat label="WPM" value={round1(derived.wpm)} big />
+            <Stat label="Accuracy" value={`${round1(derived.accuracy)}%`} big />
+            <Stat label="Progress" value={`${derived.progress}%`} />
+            <Stat label="Streak" value={`${derived.streak} (best ${derived.bestStreak})`} />
+            <Stat label="Mistakes" value={derived.mistakes} />
+            <Stat label="Backspaces" value={backspaces} />
+          </div>
+
+          <div className="meter">
+            <div className="meterTop">
+              <span>Accuracy bar</span>
+              <span>{round1(derived.accuracy)}%</span>
+            </div>
+            <Bar value={derived.accuracy} />
+          </div>
+
+          <div className="meter">
+            <div className="meterTop">
+              <span>Progress bar</span>
+              <span>{derived.progress}%</span>
+            </div>
+            <Bar value={derived.progress} />
+          </div>
+
+          <div className="divider" />
+
+          <div className="row between">
+            <div className="cardTitle" style={{ margin: 0 }}>
+              Local Leaderboard (Top 10)
+            </div>
+            <button className="btn small" onClick={clearLeaderboard} type="button">
+              Clear
+            </button>
+          </div>
+
+          {leaderboard.length === 0 ? (
+            <div className="empty">No scores yet on this device. Finish a round → Save.</div>
+          ) : (
+            <div className="table">
+              <div className="tr head">
+                <div>#</div>
+                <div>Name</div>
+                <div>Score</div>
+                <div>WPM</div>
+                <div>Acc</div>
+              </div>
+              {leaderboard.map((e, idx) => (
+                <div className="tr" key={e.id}>
+                  <div>{idx + 1}</div>
+                  <div title={e.at}>{e.name}</div>
+                  <div>{e.score}</div>
+                  <div>{e.wpm}</div>
+                  <div>{e.accuracy}%</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      }
+    />
   );
 }
