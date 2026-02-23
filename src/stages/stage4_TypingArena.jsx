@@ -3,16 +3,16 @@ import "../index.css";
 import Stage3_UI, { PromptRenderer, Stat, Bar } from "./Stage3_UI";
 
 const PROMPTS = [
-  "React makes interfaces feel alive by updating the UI instantly when state changes.",
-  "Speed is cool, but accuracy wins. Smooth is fast, and fast is smooth.",
-  "Events drive everything: each keypress updates state, and state updates the screen.",
-  "Small components, clear props, and simple state make apps easy to scale.",
-  "Debugging is detective work: observe, hypothesize, test, and iterate.",
-  "Great UI gives feedback: progress, errors, and results change in real time.",
-  "Consistency beats bursts. Type steady, minimize mistakes, and keep a rhythm.",
-  "Ship fast, learn faster. Measure results, improve, and deploy with confidence.",
-  "A clean interface is not decoration; it is clarity, flow, and reduced friction.",
-  "In real projects, being accurate under time pressure matters more than raw speed."
+  "React is a JavaScript library for building user interfaces from reusable components.",
+  "JSX looks like HTML, but it is JavaScript syntax that compiles to function calls.",
+  "A React component can receive data through props and return UI based on those props.",
+  "State stores data that can change over time and causes a component to re-render.",
+  "The useEffect hook is used to run side effects after a component renders.",
+  "React compares virtual DOM trees to update only the parts of the real DOM that changed.",
+  "Keys help React identify which list items changed, were added, or were removed.",
+  "Controlled inputs keep form values in React state so the UI and data stay in sync.",
+  "Lifting state up means moving shared state to the closest common parent component.",
+  "React apps are commonly bundled with tools like Vite to support fast development."
 ];
 
 const DURATIONS = [15, 20, 30];
@@ -244,22 +244,40 @@ export default function Stage4_TypingArena() {
             </div>
           </div>
 
-          <PromptRenderer prompt={prompt} typed={typed} />
-
-          <textarea
-            ref={inputRef}
-            className="input"
-            value={typed}
-            onChange={(e) => onChangeValue(e.target.value)}
+          <div
+            onClick={() => inputRef.current?.focus()}
+            role="button"
+            tabIndex={0}
             onKeyDown={(e) => {
-              if (phase === "READY") startIfNeeded();
-              if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v") e.preventDefault();
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                inputRef.current?.focus();
+              }
             }}
-            disabled={phase === "DONE"}
-            placeholder={phase === "READY" ? "Type to start (timer starts on first key)…" : phase === "RUNNING" ? "Keep going…" : "Round finished. Restart or save score."}
-          />
+            aria-label="Typing area"
+          >
+            <PromptRenderer prompt={prompt} typed={typed} />
+          </div>
 
-          <div className="hint">Paste is blocked. Timer starts on first key. Best for 15–20s live demos.</div>
+          <div className="typingCaptureWrap">
+            <textarea
+              ref={inputRef}
+              className="typingCapture"
+              value={typed}
+              onChange={(e) => onChangeValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (phase === "READY") startIfNeeded();
+                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v") e.preventDefault();
+                if (e.key === "Tab") e.preventDefault();
+              }}
+              disabled={phase === "DONE"}
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+          </div>
+
+          <div className="hint">Click the prompt and type. Gray = pending, white = correct, red = error.</div>
 
           {phase === "DONE" && (
             <div className="results">

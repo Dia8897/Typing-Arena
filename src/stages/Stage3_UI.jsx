@@ -15,23 +15,21 @@ export function PromptRenderer({ prompt, typed }) {
     const expected = prompt[i];
     const got = i < t ? typed[i] : null;
 
-    let style = {};
+    let stateClass = "pending";
     if (got === null) {
-      if (i === t) style = { textDecoration: "underline", textDecorationThickness: 2 };
-      else style = { opacity: 0.75 };
+      stateClass = "pending";
     } else if (got === expected) {
-      style = {};
+      stateClass = "correct";
     } else {
-      style = {
-        textDecoration: "underline",
-        textDecorationColor: "#c1121f",
-        textDecorationThickness: 3
-      };
+      stateClass = "wrong";
     }
 
     spans.push(
-      <span key={i} style={style}>
-        {expected}
+      <span
+        key={i}
+        className={`promptChar ${stateClass} ${i === t ? "current" : ""}`}
+      >
+        {expected === " " ? "\u00A0" : expected}
       </span>
     );
   }
