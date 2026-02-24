@@ -1,10 +1,7 @@
 import React from "react";
 import "../index.css";
 
-/**
- * STAGE 1: Base Shell (Installation + React entry point + "App is running")
- * This is the wrapper used by all next stages.
- */
+
 export default function Stage1_Shell({ title, subtitle, headerRight, children }) {
   return (
     <div className="page">
