@@ -29,7 +29,7 @@ export function PromptRenderer({ prompt, typed }) {
         key={i}
         className={`promptChar ${stateClass} ${i === t ? "current" : ""}`}
       >
-        {expected === " " ? "\u00A0" : expected}
+        {expected}
       </span>
     );
   }

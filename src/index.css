@@ -105,6 +105,7 @@ select {
   font-size: 17px;
   letter-spacing: 0;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   user-select: none;
   cursor: text;
   margin-bottom: 10px;
@@ -272,8 +273,23 @@ select {
     align-items: flex-start;
   }
   .timer { width: 100%; justify-content: space-between; }
-  .dashGrid, .resultsGrid { grid-template-columns: 1fr; }
-  .statValue.big { font-size: 20px; }
+  .dashGrid, .resultsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .stat {
+    padding: 8px;
+    border-radius: 12px;
+  }
+  .statLabel { font-size: 11px; }
+  .statValue {
+    font-size: 14px;
+    margin-top: 2px;
+  }
+  .statValue.big { font-size: 18px; }
+  .meter { margin-top: 8px; }
+  .meterTop { font-size: 11px; margin-bottom: 4px; }
+  .bar { height: 8px; }
   .table {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
