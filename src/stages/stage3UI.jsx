@@ -1,5 +1,5 @@
 import React from "react";
-import Stage2_Layout from "./Stage2_Layout";
+import Stage2_Layout from "./stage2Layout";
 
 /**
  * STAGE 3: Components (reusable UI building blocks)

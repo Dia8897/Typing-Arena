@@ -5,7 +5,7 @@ import "../index.css";
  * STAGE 1: Base Shell (Installation + React entry point + "App is running")
  * This is the wrapper used by all next stages.
  */
-import Stage1_Shell from "./Stage1_Shell";
+import Stage1_Shell from "./stage1Shell";
 
 /**
  * STAGE 2: Creating a React app (JSX layout)

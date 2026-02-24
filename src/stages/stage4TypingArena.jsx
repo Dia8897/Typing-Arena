@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "../index.css";
-import Stage3_UI, { PromptRenderer, Stat, Bar } from "./Stage3_UI";
+import Stage3_UI, { PromptRenderer, Stat, Bar } from "./stage3UI";
 
 const PROMPTS = [
   "React is a JavaScript library for building user interfaces from reusable components.",

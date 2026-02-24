@@ -519,10 +519,10 @@
 import React from "react";
 import "./index.css";
 
-import Stage1_Shell from "./stages/Stage1_Shell";
-import Stage2_Layout from "./stages/Stage2_Layout";
-import Stage3_UI, { PromptRenderer, Stat, Bar } from "./stages/Stage3_UI";
-import Stage4_TypingArena from "./stages/stage4_TypingArena";
+import Stage1_Shell from "./stages/stage1Shell";
+import Stage2_Layout from "./stages/stage2Layout";
+import Stage3_UI, { PromptRenderer, Stat, Bar } from "./stages/stage3UI";
+import Stage4_TypingArena from "./stages/stage4TypingArena";
 
 const STAGE = 4; // change live: 1 -> 2 -> 3 -> 4
 
