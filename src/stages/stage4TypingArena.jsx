@@ -293,7 +293,7 @@ export default function Stage4_TypingArena() {
   return (
     <Stage3_UI
       title="Typing Arena"
-      subtitle="Live stats • short rounds • perfect for classroom competition"
+      subtitle="Live stats • short rounds"
       headerRight={headerRight}
       left={
         <>
