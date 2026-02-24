@@ -309,34 +309,38 @@ export default function Stage4_TypingArena() {
       }
       right={
         <>
-          <div className="cardTitle">Live Dashboard</div>
+          {phase !== "DONE" && (
+            <>
+              <div className="cardTitle">Live Dashboard</div>
 
-          <div className="dashGrid">
-            <Stat label="WPM" value={round1(derived.wpm)} big />
-            <Stat label="Accuracy" value={`${round1(derived.accuracy)}%`} big />
-            <Stat label="Progress" value={`${derived.progress}%`} />
-            <Stat label="Streak" value={`${derived.streak} (best ${derived.bestStreak})`} />
-            <Stat label="Mistakes" value={derived.mistakes} />
-            <Stat label="Backspaces" value={backspaces} />
-          </div>
+              <div className="dashGrid">
+                <Stat label="WPM" value={round1(derived.wpm)} big />
+                <Stat label="Accuracy" value={`${round1(derived.accuracy)}%`} big />
+                <Stat label="Progress" value={`${derived.progress}%`} />
+                <Stat label="Streak" value={`${derived.streak} (best ${derived.bestStreak})`} />
+                <Stat label="Mistakes" value={derived.mistakes} />
+                <Stat label="Backspaces" value={backspaces} />
+              </div>
 
-          <div className="meter">
-            <div className="meterTop">
-              <span>Accuracy bar</span>
-              <span>{round1(derived.accuracy)}%</span>
-            </div>
-            <Bar value={derived.accuracy} />
-          </div>
+              <div className="meter">
+                <div className="meterTop">
+                  <span>Accuracy bar</span>
+                  <span>{round1(derived.accuracy)}%</span>
+                </div>
+                <Bar value={derived.accuracy} />
+              </div>
 
-          <div className="meter">
-            <div className="meterTop">
-              <span>Progress bar</span>
-              <span>{derived.progress}%</span>
-            </div>
-            <Bar value={derived.progress} />
-          </div>
+              <div className="meter">
+                <div className="meterTop">
+                  <span>Progress bar</span>
+                  <span>{derived.progress}%</span>
+                </div>
+                <Bar value={derived.progress} />
+              </div>
 
-          <div className="divider" />
+              <div className="divider" />
+            </>
+          )}
 
           <div className="row between">
             <div className="cardTitle" style={{ margin: 0 }}>
