@@ -19,24 +19,34 @@ const DURATIONS = [15, 20, 30];
 const LS_KEY = "typing_arena_leaderboard_v1";
 
 function pickPrompt() {
+  // Pick one random sentence for the next typing round.
   return PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
 }
 function round1(n) {
+  // Normalize numeric stats to one decimal place for UI consistency.
   return Math.round(n * 10) / 10;
 }
 function computeWPM(correctChars, elapsedSeconds) {
+  // Convert correctly typed characters into words-per-minute (5 chars = 1 word).
   const minutes = elapsedSeconds / 60;
   if (minutes <= 0) return 0;
   return (correctChars / 5) / minutes;
 }
 function accuracyPct(correct, totalTyped) {
+  // Return accuracy percent based on correct chars vs total typed chars.
   if (totalTyped <= 0) return 100;
   return (correct / totalTyped) * 100;
 }
 function scoreFormula({ correctChars, mistakes, wpm, accuracy }) {
+  // Produce a single leaderboard score from speed, precision, and errors.
   return correctChars * 2 - mistakes * 3 + wpm * 0.5 + accuracy * 0.2;
 }
+
+
+// It loads previously saved scores from the browser
+// so when the page refreshes, the leaderboard is still there.
 function loadLeaderboard() {
+  // Read and validate saved leaderboard entries from localStorage.
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return [];
@@ -46,11 +56,16 @@ function loadLeaderboard() {
     return [];
   }
 }
+
+
+// It saves the leaderboard into the browser so it doesn’t disappear after refresh
 function saveLeaderboard(entries) {
+  // Persist the current leaderboard to localStorage.
   localStorage.setItem(LS_KEY, JSON.stringify(entries));
 }
 
 export default function Stage4_TypingArena() {
+  // Main game component: manages round state, live stats, and leaderboard actions.
   const inputRef = useRef(null);
 
   const [duration, setDuration] = useState(15);
@@ -63,10 +78,13 @@ export default function Stage4_TypingArena() {
 
   const [typed, setTyped] = useState("");
   const [backspaces, setBackspaces] = useState(0);
+  const [carry, setCarry] = useState({ correctChars: 0, mistakes: 0, typedChars: 0, bestStreak: 0 });
 
   const [leaderboard, setLeaderboard] = useState(() => loadLeaderboard());
 
+  
   const derived = useMemo(() => {
+    // Compute live typing metrics from the current prompt, typed text, and elapsed time.
     let correct = 0;
     let wrong = 0;
 
@@ -94,7 +112,19 @@ export default function Stage4_TypingArena() {
     return { correctChars: correct, mistakes: wrong, accuracy: acc, wpm, streak: currentStreak, bestStreak, progress };
   }, [prompt, typed, elapsed]);
 
+  const totals = useMemo(() => {
+    // Merge completed-prompt totals with the current prompt in progress.
+    const correctChars = carry.correctChars + derived.correctChars;
+    const mistakes = carry.mistakes + derived.mistakes;
+    const typedChars = carry.typedChars + typed.length;
+    const bestStreak = Math.max(carry.bestStreak, derived.bestStreak);
+    const wpm = computeWPM(correctChars, Math.max(elapsed, 1));
+    const accuracy = accuracyPct(correctChars, typedChars);
+    return { correctChars, mistakes, typedChars, bestStreak, wpm, accuracy };
+  }, [carry, derived, typed.length, elapsed]);
+
   useEffect(() => {
+    // Run the round timer while active, then end the round when time reaches zero.
     if (phase !== "RUNNING" || !startAt) return;
 
     const id = setInterval(() => {
@@ -110,6 +140,7 @@ export default function Stage4_TypingArena() {
   }, [phase, startAt, duration]);
 
   useEffect(() => {
+    // Keep countdown and elapsed values aligned when duration changes in READY phase.
     if (phase === "READY") {
       setTimeLeft(duration);
       setElapsed(0);
@@ -117,10 +148,27 @@ export default function Stage4_TypingArena() {
   }, [duration, phase]);
 
   useEffect(() => {
+    // Keep the typing textarea focused whenever the round is not finished.
     if (phase !== "DONE") inputRef.current?.focus();
   }, [phase]);
 
+  useEffect(() => {
+    // While running, auto-load a new prompt as soon as the current one is completed perfectly.
+    const finishedPrompt = typed.length === prompt.length && derived.correctChars === prompt.length && derived.mistakes === 0;
+    if (phase !== "RUNNING" || !finishedPrompt) return;
+
+    setCarry((c) => ({
+      correctChars: c.correctChars + derived.correctChars,
+      mistakes: c.mistakes + derived.mistakes,
+      typedChars: c.typedChars + typed.length,
+      bestStreak: Math.max(c.bestStreak, derived.bestStreak)
+    }));
+    setTyped("");
+    setPrompt(pickPrompt());
+  }, [phase, typed.length, prompt.length, derived.correctChars, derived.mistakes, derived.bestStreak]);
+
   function startIfNeeded() {
+    // Start timing on first interaction so rounds begin exactly when typing starts.
     if (phase === "READY") {
       setPhase("RUNNING");
       setStartAt(Date.now());
@@ -128,27 +176,34 @@ export default function Stage4_TypingArena() {
   }
 
   function reset(newPrompt = true) {
+    // Reset the round state and optionally rotate to a fresh prompt.
     setPhase("READY");
     setStartAt(null);
     setElapsed(0);
     setTimeLeft(duration);
     setTyped("");
     setBackspaces(0);
+    setCarry({ correctChars: 0, mistakes: 0, typedChars: 0, bestStreak: 0 });
     if (newPrompt) setPrompt(pickPrompt());
     setTimeout(() => inputRef.current?.focus(), 0);
   }
 
   function onChangeValue(next) {
+    // Update typed input, auto-start the round, and track backspace usage.
     startIfNeeded();
     if (next.length < typed.length) setBackspaces((b) => b + (typed.length - next.length));
     setTyped(next);
   }
 
   function submitScore(name) {
+    // Build a final score entry, merge it into top results, and persist leaderboard.
     const finalElapsed = Math.max(1, elapsed || duration);
-    const finalWpm = computeWPM(derived.correctChars, finalElapsed);
-    const finalAcc = accuracyPct(derived.correctChars, typed.length);
-    const score = scoreFormula({ correctChars: derived.correctChars, mistakes: derived.mistakes, wpm: finalWpm, accuracy: finalAcc });
+    const finalCorrect = totals.correctChars;
+    const finalMistakes = totals.mistakes;
+    const finalTyped = totals.typedChars;
+    const finalWpm = computeWPM(finalCorrect, finalElapsed);
+    const finalAcc = accuracyPct(finalCorrect, finalTyped);
+    const score = scoreFormula({ correctChars: finalCorrect, mistakes: finalMistakes, wpm: finalWpm, accuracy: finalAcc });
 
     const entry = {
       id: crypto?.randomUUID?.() || String(Date.now()),
@@ -156,8 +211,8 @@ export default function Stage4_TypingArena() {
       duration,
       wpm: round1(finalWpm),
       accuracy: round1(finalAcc),
-      correctChars: derived.correctChars,
-      mistakes: derived.mistakes,
+      correctChars: finalCorrect,
+      mistakes: finalMistakes,
       score: round1(score),
       at: new Date().toISOString()
     };
@@ -168,40 +223,46 @@ export default function Stage4_TypingArena() {
   }
 
   function clearLeaderboard() {
+    // Remove all saved leaderboard entries from UI state and storage.
     setLeaderboard([]);
     saveLeaderboard([]);
   }
 
   const finalStats = useMemo(() => {
+    // Freeze final result metrics shown after the round ends.
     const finalElapsed = Math.max(1, elapsed || duration);
-    const finalWpm = computeWPM(derived.correctChars, finalElapsed);
-    const finalAcc = accuracyPct(derived.correctChars, typed.length);
-    const finalScore = scoreFormula({ correctChars: derived.correctChars, mistakes: derived.mistakes, wpm: finalWpm, accuracy: finalAcc });
+    const finalCorrect = totals.correctChars;
+    const finalMistakes = totals.mistakes;
+    const finalWpm = computeWPM(finalCorrect, finalElapsed);
+    const finalAcc = accuracyPct(finalCorrect, totals.typedChars);
+    const finalScore = scoreFormula({ correctChars: finalCorrect, mistakes: finalMistakes, wpm: finalWpm, accuracy: finalAcc });
 
     return {
       wpm: round1(finalWpm),
       accuracy: round1(finalAcc),
       score: round1(finalScore),
-      correctChars: derived.correctChars,
-      mistakes: derived.mistakes,
-      bestStreak: derived.bestStreak,
+      correctChars: finalCorrect,
+      mistakes: finalMistakes,
+      bestStreak: totals.bestStreak,
       backspaces
     };
-  }, [elapsed, duration, derived, typed.length, backspaces]);
+  }, [elapsed, duration, totals, backspaces]);
 
   async function copyResult() {
+    // Copy a shareable summary of the finished round to the clipboard.
     const text =
       `Typing Arena (${duration}s) | WPM: ${finalStats.wpm} | Acc: ${finalStats.accuracy}% | ` +
       `Score: ${finalStats.score} | Correct: ${finalStats.correctChars} | Mistakes: ${finalStats.mistakes}`;
     try {
       await navigator.clipboard.writeText(text);
-      alert("Copied result ✅");
+      alert("Copied result ");
     } catch {
       alert(text);
     }
   }
 
   function handleSave() {
+    // Ask for a name and save the current result into the local leaderboard.
     const name = window.prompt("Enter your name (for this device’s leaderboard):") || "Anonymous";
     submitScore(name);
   }
@@ -314,20 +375,20 @@ export default function Stage4_TypingArena() {
               <div className="cardTitle">Live Dashboard</div>
 
               <div className="dashGrid">
-                <Stat label="WPM" value={round1(derived.wpm)} big />
-                <Stat label="Accuracy" value={`${round1(derived.accuracy)}%`} big />
+                <Stat label="WPM" value={round1(totals.wpm)} big />
+                <Stat label="Accuracy" value={`${round1(totals.accuracy)}%`} big />
                 <Stat label="Progress" value={`${derived.progress}%`} />
-                <Stat label="Streak" value={`${derived.streak} (best ${derived.bestStreak})`} />
-                <Stat label="Mistakes" value={derived.mistakes} />
+                <Stat label="Streak" value={`${derived.streak} (best ${totals.bestStreak})`} />
+                <Stat label="Mistakes" value={totals.mistakes} />
                 <Stat label="Backspaces" value={backspaces} />
               </div>
 
               <div className="meter">
                 <div className="meterTop">
                   <span>Accuracy bar</span>
-                  <span>{round1(derived.accuracy)}%</span>
+                  <span>{round1(totals.accuracy)}%</span>
                 </div>
-                <Bar value={derived.accuracy} />
+                <Bar value={totals.accuracy} />
               </div>
 
               <div className="meter">
